@@ -36,7 +36,7 @@ void gravaMedias() {
     ofstream outfile(fileName, ios_base::out);
     double tempoSequencial = media(1);
     outfile << "tempo;speedup;eficiencia;kf" << endl;
-    for (int i = 1; i < 4; i++) {
+    for (int i = 1; i <= 4; i++) {
         if (i == 3) {
             continue;
         }
@@ -51,16 +51,16 @@ void gravaMedias() {
 
 void executeTests() {
     for (int i = 0; i < 10; i++) {
-        system("mpirun -np 1 ./Bellmanford input/matrix.txt");
+        system("mpirun -np 1 ./Bellmanford Input/matrix.txt");
     }
 
     for (int i = 0; i < 10; i++) {
-        system("mpirun -np 2 ./Bellmanford input/matrix.txt");
+        system("mpirun -np 2 ./Bellmanford Input/matrix.txt");
     }
 
-    /*for (int i = 0; i < 10; i++) {
-        system("mpirun -np 4 ./Bellmanford input/matrix.txt");
-    }*/
+    for (int i = 0; i < 10; i++) {
+        system("mpirun -np 4 ./Bellmanford Input/matrix.txt");
+    }
 }
 
 int main(int argc, char **argv) {
