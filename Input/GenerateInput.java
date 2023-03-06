@@ -46,6 +46,6 @@ public class GenerateInput {
     }
 
    public static void main(String[] args){
-        generateAndWriteAdjacencyMatrixToFile(Integer.valueOf(args[0]), 0.85, "../matrix.txt");
+        generateAndWriteAdjacencyMatrixToFile(Integer.valueOf(args[0]), 0.85, "matrix.txt");
     }
 }

@@ -173,9 +173,10 @@ void free_Mem(int *loc_mat, int *loc_dist, int *loc_enqueue_counter, bool *queue
     free(loc_enqueue_counter); 
 }
 
-int timeOutput(double t1, double t2) {  
+int timeOutput(double t1, double t2,int np) {  
   std::ofstream outfile;
-  outfile.open("output/timeOutput.txt", std::ios_base::app);
+  string fileName = "output/timeOutput" +  std::to_string(np) + ".txt";
+  outfile.open(fileName, std::ios_base::app);
   outfile << std::setprecision(6) << (t2 - t1) << endl; 
   return 0;
 }
@@ -221,7 +222,7 @@ int main(int argc, char **argv) {
         std::cout << utils::N << endl;
         std::cerr.setf(std::ios::fixed);
         std::cerr << std::setprecision(6) << "Time(s): " << (t2 - t1) << endl;
-        timeOutput(t1,t2);
+        timeOutput(t1,t2, numberProcesses);
         utils::print_result(has_negative_cycle, distanceArray);
         free(distanceArray);
         free(utils::adjacencyMatrix);
