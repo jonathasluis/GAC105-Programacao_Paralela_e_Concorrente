@@ -2,7 +2,7 @@
  * This is a mpi version of bellman_ford algorithm
  * Compile: mpic++ Bellmanford.cpp -o Bellmanford
  * Run: mpiexec -n <number of processes> ./Bellmanford matrix.txt
- * Or : mpirun -np <number of processes> ./Bellmanford matrix.txt 
+ * Or : mpirun -np <number of processes> ./Bellmanford matrix.txt
  * you will find the output file 'output.txt'
  * */
 
@@ -79,9 +79,6 @@ int timeOutput(double t1, double t2, int np) {
 }
 }  // namespace utils
 
-void free_Mem(int *loc_mat, int *loc_dist, int *loc_enqueue_counter,
-              bool *queue1, bool *queue2);
-
 /**
  * Bellman-Ford algorithm. Find the shortest path from vertex 0 to other
  * vertices.
@@ -93,10 +90,6 @@ void bellman_ford(int my_rank, int numberProcesses, MPI_Comm comm,
     int loc_start, loc_end;
     int *loc_mat;   // local matrix
     int *loc_dist;  // local distance
-
-    bool *queue1;
-    bool *queue2;
-    int *loc_enqueue_counter;
 
     // step 1: broadcast N
     if (my_rank == 0) {
@@ -115,13 +108,11 @@ void bellman_ford(int my_rank, int numberProcesses, MPI_Comm comm,
     // step 3: allocate local memory
     loc_mat = (int *)malloc(loc_n * loc_n * sizeof(int));
     loc_dist = (int *)malloc(loc_n * sizeof(int));
-    queue1 = (bool *)malloc(loc_n * sizeof(bool));
-    queue2 = (bool *)malloc(loc_n * sizeof(bool));
-    loc_enqueue_counter = (int *)calloc(loc_n, sizeof(int));
 
     // step 4: broadcast matrix adjacencyMatrix
-    if (my_rank == 0)
+    if (my_rank == 0) {
         memcpy(loc_mat, adjacencyMatrix, sizeof(int) * loc_n * loc_n);
+    }
     MPI_Bcast(loc_mat, loc_n * loc_n, MPI_INT, 0, comm);
 
     // step 5: bellman-ford algorithm
@@ -129,66 +120,57 @@ void bellman_ford(int my_rank, int numberProcesses, MPI_Comm comm,
         loc_dist[i] = INF;
     }
     loc_dist[0] = 0;
-    queue1[0] = true;
+    MPI_Barrier(comm);
 
     bool loc_has_change;
-    bool has_change;
-    auto iter = 0;
-    while (1) {
+    int loc_iter_num = 0;
+    for (int iter = 0; iter < loc_n - 1; iter++) {
         loc_has_change = false;
-        memset(queue2, 0, sizeof(bool) * loc_n);  // 0 as false
-        for (int u = 0; u < loc_n; u++) {
-            if (queue1[u]) {  // if u is active
-                for (int v = loc_start; v < loc_end; v++) {
-                    int weight =
-                        loc_mat[utils::convert_dimension_2D_1D(u, v, loc_n)];
-                    if (weight < INF) {
-                        if (loc_dist[u] + weight < loc_dist[v]) {
-                            loc_dist[v] = loc_dist[u] + weight;
-                            queue2[v] = true;
-                            loc_has_change = true;
-                        }
+        loc_iter_num++;
+        for (int u = loc_start; u < loc_end; u++) {
+            for (int v = 0; v < loc_n; v++) {
+                int weight =
+                    loc_mat[utils::convert_dimension_2D_1D(u, v, loc_n)];
+                if (weight < INF) {
+                    if (loc_dist[u] + weight < loc_dist[v]) {
+                        loc_dist[v] = loc_dist[u] + weight;
+                        loc_has_change = true;
                     }
                 }
             }
         }
-        MPI_Allreduce(queue2, queue1, loc_n, MPI_CXX_BOOL, MPI_LOR, comm);
-        for (int u = 0; u < loc_n; u++) {
-            if (queue1[u]) {
-                loc_enqueue_counter[u]++;
-                if (loc_enqueue_counter[u] >= loc_n) {
-                    *has_negative_cycle = true;
-                    free_Mem(loc_mat, loc_dist, loc_enqueue_counter, queue1,
-                             queue2);
+        MPI_Allreduce(MPI_IN_PLACE, &loc_has_change, 1, MPI_CXX_BOOL, MPI_LOR,
+                      comm);
+        if (!loc_has_change) break;
+        MPI_Allreduce(MPI_IN_PLACE, loc_dist, loc_n, MPI_INT, MPI_MIN, comm);
+    }
+
+    // do one more step
+    if (loc_iter_num == loc_n - 1) {
+        loc_has_change = false;
+        for (int u = loc_start; u < loc_end; u++) {
+            for (int v = 0; v < loc_n; v++) {
+                int weight =
+                    loc_mat[utils::convert_dimension_2D_1D(u, v, loc_n)];
+                if (weight < INF) {
+                    if (loc_dist[u] + weight < loc_dist[v]) {
+                        loc_dist[v] = loc_dist[u] + weight;
+                        loc_has_change = true;
+                        break;
+                    }
                 }
             }
         }
-
-        MPI_Allreduce(&loc_has_change, &has_change, 1, MPI_CXX_BOOL, MPI_LOR,
-                      comm);
-        if (!has_change) {
-            std::cout << iter << std::endl;
-            break;
-        }
-
-        MPI_Allreduce(MPI_IN_PLACE, loc_dist, loc_n, MPI_INT, MPI_MIN, comm);
-        ++iter;
+        MPI_Allreduce(&loc_has_change, has_negative_cycle, 1, MPI_CXX_BOOL,
+                      MPI_LOR, comm);
     }
 
     // step 6: retrieve results back
     if (my_rank == 0) memcpy(distanceArray, loc_dist, loc_n * sizeof(int));
 
     // step 7: remember to free memory
-    free_Mem(loc_mat, loc_dist, loc_enqueue_counter, queue1, queue2);
-}
-
-void free_Mem(int *loc_mat, int *loc_dist, int *loc_enqueue_counter,
-              bool *queue1, bool *queue2) {
     free(loc_mat);
     free(loc_dist);
-    free(queue1);
-    free(queue2);
-    free(loc_enqueue_counter);
 }
 
 int main(int argc, char **argv) {
