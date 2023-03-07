@@ -49,7 +49,23 @@ void gravaMedias() {
     }
 }
 
+void clearArq() {
+    for (int i = 1; i <= 4; i++) {
+        if (i == 3) {
+            continue;
+        }
+
+        string fileName = "output/timeOutput" + to_string(i) + ".txt";
+        ofstream outputf(fileName, ofstream::out);
+        if (outputf.good()) {
+            outputf << "";
+            outputf.close();
+        }
+    }
+}
+
 void executeTests() {
+    clearArq();
     for (int i = 0; i < 10; i++) {
         system("mpirun -np 1 ./Bellmanford Input/matrix.txt");
     }
