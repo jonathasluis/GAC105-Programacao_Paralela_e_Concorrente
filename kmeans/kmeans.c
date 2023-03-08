@@ -175,13 +175,14 @@ int main(int argc, char *argv[]) {
 
         for (int muidx = 0; muidx < k; muidx++) {
             int permutation[size];
-            for (int j = 0; j < k; j++) {
-                permutation[j] = 0;
+            for (int i = 0; i < size; i++) {
+                permutation[i] = 0;
             }
 
             int minpermutation[size];
             double mindistance = INFINITY;
             double mincenter[2];
+
             do {
                 double center[2] = {0, 0};
                 for (int i = 0; i < size; i++) {
