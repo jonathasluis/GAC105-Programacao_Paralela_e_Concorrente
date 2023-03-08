@@ -22,6 +22,8 @@ int loadVertices(char *arq, float *v[2], int *n) {
     v[0] = malloc(lines * sizeof(float));
     v[1] = malloc(lines * sizeof(float));
 
+    rewind(f);
+    
     for (*n = 0; ; *n += 1) {
         int res = fscanf(f, "%f %f", &v[0][*n], &v[1][*n]);
         if (res == EOF) {
