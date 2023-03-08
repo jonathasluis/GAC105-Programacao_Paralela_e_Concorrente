@@ -67,11 +67,11 @@ void clearArq() {
 void executeTests() {
     clearArq();
     for (int i = 0; i < 10; i++) {
-        system("mpirun -np 1 ./Bellmanford Input/matrix.txt");
+        system("mpirun -np 1 ./Bellmanford /Input/matrix.txt");
     }
 
     for (int i = 0; i < 10; i++) {
-        system("mpirun -np 2 ./Bellmanford Input/matrix.txt");
+        system("mpirun -np 2 ./Bellmanford /Input/matrix.txt");
     }
 
     for (int i = 0; i < 10; i++) {
