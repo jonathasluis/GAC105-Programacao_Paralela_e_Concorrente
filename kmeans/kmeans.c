@@ -112,6 +112,8 @@ int main(int argc, char *argv[]) {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+    double t_start = MPI_Wtime();
+
     srand(1);
 
     int nprime = n / size;
@@ -135,7 +137,7 @@ int main(int argc, char *argv[]) {
     double J = calcJ(nprime, v, k, mu);
     double Jprime = 0;
     int iter = 0;
-    int maxiter = 10000;
+    int maxiter = 1000;
     while (fabs(Jprime - J) > threshold && iter < maxiter) {
         Jprime = J;
 
@@ -225,6 +227,9 @@ int main(int argc, char *argv[]) {
             }
             printf("\n");
         }
+        
+        double t_end = MPI_Wtime();
+        fprintf(stderr, "%lf\n", t_end - t_start);
     }
 
     MPI_Finalize();

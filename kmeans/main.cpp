@@ -3,6 +3,8 @@
 #include <string>
 #include <random>
 #include <time.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 using namespace std;
 
@@ -13,20 +15,42 @@ double efficiency(double speedUp, int np) { return speedUp / np; }
 
 double karpFlat(double speedUp, int np) { return ((1.0 / speedUp) - (1.0 / np)) / (1.0 - (1.0 / np)); }
 
+double runGetTime(string cmd) {
+    double t = 0;
+
+    int fd_err[2];
+    pipe(fd_err);
+
+    pid_t p;
+    if ((p = fork()) == 0) {
+        close(fd_err[0]);
+        dup2(fd_err[1], 2);
+
+        cout << cmd << endl;
+        system(cmd.c_str());
+        exit(0);
+    } else {
+        int status;
+        close(fd_err[1]);
+        waitpid(p, &status, 0);
+        char buf[64];
+        read(fd_err[0], buf, 64);
+        t = strtod(buf, NULL);
+    }
+    return t;
+}
+
 double media_tempo(int np) {
-    string command = "mpirun -np " + to_string(np) + " ./kmeans input/entrada.txt 100";
+    string command = "mpirun -np " + to_string(np) + " ./kmeans input/entrada.txt 4";
     time_t start, end;
     string fileName = "output/times_np_" + to_string(np) + ".txt";
     fstream outputf(fileName, ofstream::out);
     double media = 0.0;
     for (int i = 0; i < 10; i++) {
-        clock_t Ticks[2];
-        Ticks[0] = clock();
-        system(command.c_str());
-        Ticks[1] = clock();
-        double Tempo = (Ticks[1] - Ticks[0]) * 1000.0 / CLOCKS_PER_SEC;
-        outputf << Tempo << ';';
-        media += Tempo;
+        double t = runGetTime(command);
+        cout << t << endl;
+        outputf << t << ';';
+        media += t;
     }
     outputf << endl << "Media: " << media / 10 << endl;
     outputf.close();
