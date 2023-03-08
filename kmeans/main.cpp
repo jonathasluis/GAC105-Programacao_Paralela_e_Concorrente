@@ -24,6 +24,7 @@ double runGetTime(string cmd) {
     pid_t p;
     if ((p = fork()) == 0) {
         close(fd_err[0]);
+        close(1);
         dup2(fd_err[1], 2);
 
         cout << cmd << endl;
@@ -40,39 +41,43 @@ double runGetTime(string cmd) {
     return t;
 }
 
-double media_tempo(int np) {
-    string command = "mpirun -np " + to_string(np) + " ./kmeans input/entrada.txt 4";
-    time_t start, end;
-    string fileName = "output/times_np_" + to_string(np) + ".txt";
-    fstream outputf(fileName, ofstream::out);
-    double media = 0.0;
+void estastisticas(int n, int *nps, int clusters) {
+    fstream out("output/estatistica_" + to_string(clusters) + ".tsv", ofstream::out);
+    out << "processos\t";
     for (int i = 0; i < 10; i++) {
-        double t = runGetTime(command);
-        cout << t << endl;
-        outputf << t << ';';
-        media += t;
+        out << "t" << i << "\t";
     }
-    outputf << endl << "Media: " << media / 10 << endl;
-    outputf.close();
-    return media / 10;
-}
-
-void calcula_metricas(double tempo_sequencial, double tempo_npx, int np){
-    string fileName = "output/metricas_np_" + to_string(np) + ".txt";
-    ofstream outputf(fileName, ofstream::out);
-    outputf.seekp(0, ios::end);
-    if (outputf.good()) {
-        outputf << "tempo;speedup;eficiencia;kf" << endl;
-        double speedup = speedUp(tempo_sequencial, tempo_npx);
-        double eficiencia = efficiency(speedup, np);
-        double e = karpFlat(speedup, np);
-        outputf << tempo_npx << ";" << speedup << ";" << eficiencia << ";" << e << endl;
-        outputf.close();
+    out << "media" << "\t";
+    out << "speedup" << "\t";
+    out << "efficiency" << "\t";
+    out << "karpflatt" << endl;
+    double t0;
+    for (int i = 0; i < n; i++) {
+        int np = nps[i];
+        out << np << "\t";
+        string command = "mpirun -np " + to_string(np) + " ./kmeans input/entrada.txt " + to_string(clusters);
+        cout << command << endl;
+        double media = 0.0;
+        for (int j = 0; j < 10; j++) {
+            double t = runGetTime(command);
+            out << t << "\t";
+            media += t;
+        }
+        if (i == 0) {
+            t0 = media;
+        }
+        out << media / 10 << "\t";
+        double speed = speedUp(t0, media);
+        out << speed << "\t";
+        out << efficiency(speed, np) << "\t";
+        double kf = np == 1 ? 0 : karpFlat(speed, np); 
+        out << kf << endl;
     }
+    out.close();
 }
 
 int main() {
-
+    system("mpicc -o kmeans kmeans.c");
     // gera arquivo de entrada com 1000000 pontos aleatorios
     ofstream inputf("input/entrada.txt", ofstream::out);
     if (inputf.good()) {
@@ -85,14 +90,9 @@ int main() {
         inputf.close();
     }
 
-    double tempo_sequencial = media_tempo(1);
-    double tempo_np2 = media_tempo(2);
-    double tempo_np4 = media_tempo(4);
-    double tempo_np8 = media_tempo(8);
-
-    calcula_metricas(tempo_sequencial, tempo_np2, 2);
-    calcula_metricas(tempo_sequencial, tempo_np4, 4); 
-    calcula_metricas(tempo_sequencial, tempo_np8, 8);
-
+    int nps[] = {1, 2, 4, 6, 8};
+    estastisticas(5, nps, 2);
+    estastisticas(5, nps, 3);
+    estastisticas(5, nps, 4);
     return 0;
 }
