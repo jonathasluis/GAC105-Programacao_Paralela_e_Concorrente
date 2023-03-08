@@ -10,7 +10,7 @@ double speedUp(double tempSeq, double tempPara) { return tempSeq / tempPara; }
 
 double efficiency(double speedUp, int np) { return speedUp / np; }
 
-double karpFlat(double speedUp, int np) { return ((1 / speedUp) - (1 / np)) / (1 - (1 / np)); }
+double karpFlat(double speedUp, int np) { return ((1 / speedUp) - (1.0 / np)) / (1 - (1.0 / np)); }
 
 double media_tempo(int np) {
     string command = "mpirun -np " + to_string(np) + " ./kmeans input/entrada.txt 2";
@@ -30,7 +30,7 @@ double media_tempo(int np) {
     return media / 10;
 }
 
-void calcula_metricas(double tempo_sequencial, double tempo_npx, double np){
+void calcula_metricas(double tempo_sequencial, double tempo_npx, int np){
     string fileName = "output/metricas_np_" + to_string(np) + ".txt";
     ofstream outputf(fileName, ofstream::out);
     outputf.seekp(0, ios::end);
@@ -60,10 +60,10 @@ int main() {
 
     double tempo_sequencial = media_tempo(1);
     double tempo_np2 = media_tempo(2);
-    //double tempo_np4 = media_tempo(4);
+    double tempo_np4 = media_tempo(4);
 
     calcula_metricas(tempo_sequencial, tempo_np2, 2);
-    //calcula_metricas(tempo_sequencial, tempo_np4, 4); 
+    calcula_metricas(tempo_sequencial, tempo_np4, 4); 
 
     return 0;
 }
