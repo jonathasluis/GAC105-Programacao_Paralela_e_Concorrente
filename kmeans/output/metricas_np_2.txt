@@ -1,0 +1,2 @@
+tempo;speedup;eficiencia;kf
+0.1298;1.0755;0.53775;0.859599
