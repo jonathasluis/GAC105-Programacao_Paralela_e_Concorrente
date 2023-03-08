@@ -135,9 +135,9 @@ int main(int argc, char *argv[]) {
     double J = calcJ(nprime, v, k, mu);
     double Jprime = 0;
     int iter = 0;
-    int maxiter = 1000;
+    int maxiter = 10000;
     while (fabs(Jprime - J) > threshold && iter < maxiter) {
-        double Jprime = J;
+        Jprime = J;
 
         double muprime[2][k];
         int musize[k];
