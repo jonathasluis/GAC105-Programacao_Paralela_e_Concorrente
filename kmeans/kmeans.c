@@ -6,7 +6,7 @@
 #include <math.h>
 #include <locale.h>
 
-int loadVertices(char *arq, float *v[2], int *n) {
+int loadVertices(char *arq, double *v[2], int *n) {
     FILE *f = fopen(arq, "r");
     if (f == NULL) {
         return 1;
@@ -19,13 +19,13 @@ int loadVertices(char *arq, float *v[2], int *n) {
         if (c == '\n') lines += 1;
     }
 
-    v[0] = malloc(lines * sizeof(float));
-    v[1] = malloc(lines * sizeof(float));
+    v[0] = malloc(lines * sizeof(double));
+    v[1] = malloc(lines * sizeof(double));
 
     rewind(f);
     
     for (*n = 0; ; *n += 1) {
-        int res = fscanf(f, "%f %f", &v[0][*n], &v[1][*n]);
+        int res = fscanf(f, "%lf %lf", &v[0][*n], &v[1][*n]);
         if (res == EOF) {
             break;
         } else if (res != 2) {
@@ -33,19 +33,19 @@ int loadVertices(char *arq, float *v[2], int *n) {
         }
     }
 
-    v[0] = realloc(v[0], *n * sizeof(float));
-    v[1] = realloc(v[1], *n * sizeof(float));
+    v[0] = realloc(v[0], *n * sizeof(double));
+    v[1] = realloc(v[1], *n * sizeof(double));
 
     fseek(f, 0, SEEK_SET);
     return 0;
 }
 
-float square(float a) {
+double square(double a) {
     return a * a;
 }
 
-float calcJ(int n, float *v[2], int k, float mu[2][k]) {
-    float J = 0;
+double calcJ(int n, double *v[2], int k, double mu[2][k]) {
+    double J = 0;
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < k; j++) {
             J += square(v[0][i] - mu[0][j]) + square(v[1][i] - mu[1][j]);
@@ -54,13 +54,13 @@ float calcJ(int n, float *v[2], int k, float mu[2][k]) {
     return J;
 }
 
-int closestCentroid(int i, int n, float *v[2], int k, float mu[2][k]) {
-    float dist = INFINITY;
+int closestCentroid(int i, int n, double *v[2], int k, double mu[2][k]) {
+    double dist = INFINITY;
     int vk = 0;
     for (int j = 0; j < k; j++) {
-        float d = square(v[0][i] - mu[0][j]) + square(v[1][i] - mu[1][j]);
+        double d = square(v[0][i] - mu[0][j]) + square(v[1][i] - mu[1][j]);
         if (d < dist) {
-            vk = i;
+            vk = j;
             dist = d;
         }
     }
@@ -83,7 +83,7 @@ int nextPermutation(int max, int n, int permutation[n]) {
 }
 
 int main(int argc, char *argv[]) {
-    setlocale(LC_ALL, "");
+    setlocale(LC_ALL, "C");
 
     if (argc < 3) {
         fprintf(stderr, "USO: %s ARQUIVO K\n", argv[0]);
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
     char *arq = argv[1];
     int k = strtol(argv[2], NULL, 10);
 
-    float *allv[2];
+    double *allv[2];
     int n;
 
     if (k <= 0) {
@@ -116,39 +116,39 @@ int main(int argc, char *argv[]) {
 
     int nprime = n / size;
 
-    float *v[2];
-    v[0] = malloc(nprime * sizeof(float));
-    v[1] = malloc(nprime * sizeof(float));
+    double *v[2];
+    v[0] = malloc(nprime * sizeof(double));
+    v[1] = malloc(nprime * sizeof(double));
 
-    MPI_Scatter(allv[0], nprime, MPI_FLOAT, v[0], nprime, MPI_FLOAT, 0, MPI_COMM_WORLD);
-    MPI_Scatter(allv[1], nprime, MPI_FLOAT, v[1], nprime, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Scatter(allv[0], nprime, MPI_DOUBLE, v[0], nprime, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(allv[1], nprime, MPI_DOUBLE, v[1], nprime, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    float threshold = 1;
-    float mu[2][k];
-    int *centroids = malloc(nprime * sizeof(int));
-    for (int i = 0; i < k; i++) {
-        int idx = rand() % nprime;
-        mu[0][i] = v[0][idx];
-        mu[1][i] = v[1][idx];
+    double threshold = 1;
+    double mu[2][k];
+
+    for (int j = 0; j < k; j++) {
+        int i = rand() % nprime;
+        mu[0][j] = v[0][i];
+        mu[1][j] = v[1][i];
     }
 
-    float J = calcJ(nprime, v, k, mu);
-    float Jprime = 0;
-    while (fabs(Jprime - J) < threshold) {
-        float Jprime = J;
+    double J = calcJ(nprime, v, k, mu);
+    double Jprime = 0;
+    int iter = 0;
+    int maxiter = 1000;
+    while (fabs(Jprime - J) > threshold && iter < maxiter) {
+        double Jprime = J;
 
-        for (int i = 0; i < nprime; i++) {
-            centroids[i] = closestCentroid(i, nprime, v, k, mu);
-        }
-
-        float muprime[2][k];
+        double muprime[2][k];
         int musize[k];
         for (int j = 0; j < k; j++) {
+            muprime[0][j] = 0;
+            muprime[1][j] = 0;
             musize[j] = 0;
         }
 
         for (int i = 0; i < nprime; i++) {
-            int j = centroids[i];
+            int j = closestCentroid(i, nprime, v, k, mu);
             muprime[0][j] += v[0][i];
             muprime[1][j] += v[1][i];
             musize[j] += 1;
@@ -160,13 +160,14 @@ int main(int argc, char *argv[]) {
         }
 
         J = calcJ(nprime, v, k, mu);
+        iter++;
     }
 
-    float mus[size][2][k];
-    MPI_Gather(mu, k, MPI_FLOAT, mus, k, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    double mus[size][2][k];
+    MPI_Gather(mu, 2*k, MPI_DOUBLE, mus, 2*k, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     if (rank == 0) {
-        float finalmu[2][k];
+        double finalmu[2][k];
         for (int j = 0; j < k; j++) {
             finalmu[0][j] = INFINITY;
             finalmu[1][j] = INFINITY;
@@ -179,10 +180,10 @@ int main(int argc, char *argv[]) {
             }
 
             int minpermutation[size];
-            float mindistance = INFINITY;
-            float mincenter[2];
+            double mindistance = INFINITY;
+            double mincenter[2];
             do {
-                float center[2] = {0, 0};
+                double center[2] = {0, 0};
                 for (int i = 0; i < size; i++) {
                     center[0] += mus[i][0][permutation[i]];
                     center[1] += mus[i][1][permutation[i]];
@@ -192,7 +193,7 @@ int main(int argc, char *argv[]) {
                 center[0] /= size;
                 center[1] /= size;
 
-                float D = 0;
+                double D = 0;
                 for (int i = 0; i < size; i++) {
                     D += square(mus[i][0][permutation[i]] - center[0]) + square(mus[i][1][permutation[i]] - center[1]);
                 }
@@ -217,7 +218,7 @@ int main(int argc, char *argv[]) {
         }
 
         for (int j = 0; j < k; j++) {
-            printf("{ %f, %f }", finalmu[0][j], finalmu[1][j]);
+            printf("{ %lf, %lf }", finalmu[0][j], finalmu[1][j]);
             if (j < k - 1) {
                 printf(",");
             }
